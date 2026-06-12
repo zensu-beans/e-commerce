@@ -113,22 +113,9 @@
     });
 
     /* ══ DATA ══ */
-    const PRODUCTS = [
-    {
-        id: 1,
-        name: 'MacBook Air M3',
-        category: 'Laptops',
-        price: 74990,
-        oldPrice: null,
-        rating: 4.9,
-        reviews: 128,
-        badge: 'new',
-        img: 'assets/macbook.jpg',
-        wished: false
-    }
-];
+    let PRODUCTS = [];
 
-    let cartCount = '';
+    let cartCount = 0;
     let currentCat = 'All';
     let searchQuery = '';
     let sortMode = 'default';
@@ -178,6 +165,7 @@
         grid.innerHTML = list.map(p => {
             const badge = p.badge ? `<span class="card-badge badge-${p.badge}">${p.badge}</span>` : '';
             const oldP  = p.oldPrice ? `<span class="card-price-old">₱${p.oldPrice.toLocaleString()}</span>` : '';
+            const imageSrc = p.img || p.image_url || 'assets/macbook.jpg';
             const wish  = `<div class="card-wish${p.wished?' active':''}" data-id="${p.id}" data-action="wish">
                                <i class='bx ${p.wished ? "bxs-heart" : "bx-heart"}'></i>
                            </div>`;
@@ -186,18 +174,18 @@
                 ${badge}
                 ${wish}
                 <div class="card-img">
-                    <img src="${p.img}" alt="${p.name}">
+                    <img src="${imageSrc}" alt="${p.name}">
                 </div>
                 <div class="card-body">
-                    <div class="card-cat">${p.category}</div>
+                    <div class="card-cat">${p.category || 'Product'}</div>
                     <div class="card-name">${p.name}</div>
                     <div class="card-stars">
-                        ${starsHTML(p.rating)}
-                        <span>(${p.reviews})</span>
+                        ${starsHTML(p.rating || 4.6)}
+                        <span>(${p.reviews || 42})</span>
                     </div>
                     <div class="card-footer">
                         <div class="card-prices">
-                            <span class="card-price">₱${p.price.toLocaleString()}</span>
+                            <span class="card-price">₱${Number(p.price).toLocaleString()}</span>
                             ${oldP}
                         </div>
                         <button class="card-add" data-id="${p.id}" data-action="cart">
@@ -251,11 +239,42 @@
         }
     });
 
+    document.querySelectorAll('.sidebar li').forEach(item => {
+        item.addEventListener('click', e => {
+            e.preventDefault();
+            const text = item.textContent.trim();
+            currentCat = text === 'All Products' ? 'All' : text;
+            document.querySelector('.sidebar .active')?.classList.remove('active');
+            item.classList.add('active');
+            render();
+        });
+    });
+
     window.addEventListener('scroll', () => {
         document.getElementById('navbar').classList.toggle('scrolled', window.scrollY > 10);
     });
 
-    render();
+    async function loadProducts() {
+        try {
+            const response = await fetch('/products');
+            if (!response.ok) throw new Error('Failed to load products');
+            PRODUCTS = await response.json();
+            PRODUCTS = PRODUCTS.map(p => ({
+                ...p,
+                wished: false,
+                rating: p.rating || 4.6,
+                reviews: p.reviews || 42
+            }));
+            render();
+        } catch (error) {
+            console.error(error);
+            showToast('Unable to load products from the API.');
+            PRODUCTS = [];
+            render();
+        }
+    }
+
+    loadProducts();
     </script>
 
 </body>
